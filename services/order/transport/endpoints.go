@@ -26,7 +26,7 @@ func MakeEndpoints(s order.Service) Endpoints {
 
 func makeCreateEndpoint(s order.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(CreateRequest)
+		req := request.(CreateRequest) // type assertion
 		id, err := s.Create(ctx, req.Order)
 		return CreateResponse{ID: id, Err: err}, nil
 	}

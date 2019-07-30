@@ -20,15 +20,19 @@ var (
 
 // NewService wires Go kit endpoints to the HTTP transport.
 func NewService(
-	svcEndpoints transport.Endpoints, logger log.Logger,
+	svcEndpoints transport.Endpoints, options []kithttp.ServerOption, logger log.Logger,
 ) http.Handler {
 	// set-up router and initialize http endpoints
-
-	r := mux.NewRouter()
-	options := []kithttp.ServerOption{
-		kithttp.ServerErrorLogger(logger),
-		kithttp.ServerErrorEncoder(encodeError),
-	}
+	var (
+		r            = mux.NewRouter()
+		errorLogger  = kithttp.ServerErrorLogger(logger)
+		errorEncoder = kithttp.ServerErrorEncoder(encodeErrorResponse)
+	)
+	options = append(options, errorLogger, errorEncoder)
+	//options := []kithttp.ServerOption{
+	//	kithttp.ServerErrorLogger(logger),
+	//	kithttp.ServerErrorEncoder(encodeError),
+	//}
 	// HTTP Post - /orders
 	r.Methods("POST").Path("/orders").Handler(kithttp.NewServer(
 		svcEndpoints.Create,
@@ -53,10 +57,6 @@ func NewService(
 		options...,
 	))
 	return r
-}
-
-type errorer interface {
-	error() error
 }
 
 func decodeCreateRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
@@ -88,14 +88,18 @@ func encodeResponse(ctx context.Context, w http.ResponseWriter, response interfa
 	if e, ok := response.(errorer); ok && e.error() != nil {
 		// Not a Go kit transport error, but a business-logic error.
 		// Provide those as HTTP errors.
-		encodeError(ctx, e.error(), w)
+		encodeErrorResponse(ctx, e.error(), w)
 		return nil
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	return json.NewEncoder(w).Encode(response)
 }
 
-func encodeError(_ context.Context, err error, w http.ResponseWriter) {
+type errorer interface {
+	error() error
+}
+
+func encodeErrorResponse(_ context.Context, err error, w http.ResponseWriter) {
 	if err == nil {
 		panic("encodeError with nil error")
 	}

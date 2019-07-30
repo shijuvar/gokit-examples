@@ -11,6 +11,8 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	kitoc "github.com/go-kit/kit/tracing/opencensus"
+	kithttp "github.com/go-kit/kit/transport/http"
 	_ "github.com/lib/pq"
 
 	"github.com/shijuvar/gokit-examples/services/order"
@@ -45,7 +47,8 @@ func main() {
 	{
 		var err error
 		// Connect to the "ordersdb" database
-		db, err = sql.Open("postgres", "postgresql://shijuvar@localhost:26257/ordersdb?sslmode=disable")
+		db, err = sql.Open("postgres",
+			"postgresql://shijuvar@localhost:26257/ordersdb?sslmode=disable")
 		if err != nil {
 			level.Error(logger).Log("exit", err)
 			os.Exit(-1)
@@ -61,12 +64,15 @@ func main() {
 			os.Exit(-1)
 		}
 		svc = ordersvc.NewService(repository, logger)
+		// svc = middleware.LoggingMiddleware(logger)(svc)
 	}
 
 	var h http.Handler
 	{
 		endpoints := transport.MakeEndpoints(svc)
-		h = httptransport.NewService(endpoints, logger)
+		ocTracing := kitoc.HTTPServerTrace()
+		serverOptions := []kithttp.ServerOption{ocTracing}
+		h = httptransport.NewService(endpoints, serverOptions, logger)
 	}
 
 	errs := make(chan error)
