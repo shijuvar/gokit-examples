@@ -14,6 +14,7 @@ import (
 	kitoc "github.com/go-kit/kit/tracing/opencensus"
 	kithttp "github.com/go-kit/kit/transport/http"
 	_ "github.com/lib/pq"
+	"github.com/shijuvar/gokit-examples/shared/oc"
 
 	"github.com/shijuvar/gokit-examples/services/order"
 	"github.com/shijuvar/gokit-examples/services/order/cockroachdb"
@@ -27,7 +28,8 @@ func main() {
 		httpAddr = flag.String("http.addr", ":8080", "HTTP listen address")
 	)
 	flag.Parse()
-
+	// initialize our OpenCensus configuration and defer a clean-up
+	defer oc.Setup("order").Close()
 	var logger log.Logger
 	{
 		logger = log.NewLogfmtLogger(os.Stderr)
@@ -64,12 +66,26 @@ func main() {
 			os.Exit(-1)
 		}
 		svc = ordersvc.NewService(repository, logger)
+		// Add service middleware here
+		// Logging middleware
 		// svc = middleware.LoggingMiddleware(logger)(svc)
 	}
+	// Create Go kit endpoints for the Order Service
+	// Then decorates with endpoint middlewares
+	var endpoints transport.Endpoints
+	{
+		endpoints = transport.MakeEndpoints(svc)
+		// Add endpoint level middlewares here
+		// Trace server side endpoints with open census
+		endpoints = transport.Endpoints{
+			Create:       oc.ServerEndpoint("Create")(endpoints.Create),
+			GetByID:      oc.ServerEndpoint("GetByID")(endpoints.GetByID),
+			ChangeStatus: oc.ServerEndpoint("ChangeStatus")(endpoints.ChangeStatus),
+		}
 
+	}
 	var h http.Handler
 	{
-		endpoints := transport.MakeEndpoints(svc)
 		ocTracing := kitoc.HTTPServerTrace()
 		serverOptions := []kithttp.ServerOption{ocTracing}
 		h = httptransport.NewService(endpoints, serverOptions, logger)
