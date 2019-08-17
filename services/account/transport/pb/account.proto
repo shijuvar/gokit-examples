@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package pb;
+
+service Account {
+    rpc CreateCustomer (CreateCustomerRequest) returns (CreateCustomerResponse) {}
+}
+
+message CreateCustomerRequest  {
+string email =1;
+string password =2;
+string phone =3;
+}
+
+message CreateCustomerResponse {
+}
