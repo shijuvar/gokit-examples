@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
+	"github.com/shijuvar/gokit-examples/services/order/middleware"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,7 +15,7 @@ import (
 	kitoc "github.com/go-kit/kit/tracing/opencensus"
 	kithttp "github.com/go-kit/kit/transport/http"
 	_ "github.com/lib/pq"
-	"github.com/shijuvar/gokit-examples/shared/oc"
+	"github.com/shijuvar/gokit-examples/pkg/oc"
 
 	"github.com/shijuvar/gokit-examples/services/order"
 	"github.com/shijuvar/gokit-examples/services/order/cockroachdb"
@@ -68,7 +69,7 @@ func main() {
 		svc = ordersvc.NewService(repository, logger)
 		// Add service middleware here
 		// Logging middleware
-		// svc = middleware.LoggingMiddleware(logger)(svc)
+		svc = middleware.LoggingMiddleware(logger)(svc)
 	}
 	// Create Go kit endpoints for the Order Service
 	// Then decorates with endpoint middlewares
