@@ -1,3 +1,5 @@
+
+The updated source code is moved into the repository [go-distsys](https://github.com/shijuvar/go-distsys)
 # gokit-examples
 Examples for building microservices with Go Kit (gokit.io)
 
